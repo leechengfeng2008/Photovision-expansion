@@ -37,7 +37,8 @@ class Pose2dReader:
         self._inst.setServer(server)
 
         t = self._inst.getTable(table)
-        self._sub = t.getDoubleArrayTopic(key).subscribe([0.0, 0.0, 0.0])
+        # self._sub = t.getDoubleArrayTopic(key).subscribe([0.0, 0.0, 0.0]) fro no robot test
+        self._sub = t.getDoubleArrayTopic(key).subscribe([])
 
         self._last_good: Optional[Pose2d] = None
 
