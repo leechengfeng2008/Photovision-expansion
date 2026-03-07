@@ -306,16 +306,8 @@ def main():
             print("best_center_xy =", best_pile.center_xy)
             print("best_count =", best_pile.count)
 
-        print("\n=== BEST PILE ===")
-        
         print("PILE_BALL_PRIORITY_0_TO_10 =", PILE_BALL_PRIORITY_0_TO_10)
 
-        if best_pile is None:
-            print("best_pile = None")
-        else:
-            print("best_pile_id =", best_pile.pile_id)
-            print("best_center_xy =", best_pile.center_xy)
-            print("best_count =", best_pile.count)
 
         time.sleep(0.015)
 
