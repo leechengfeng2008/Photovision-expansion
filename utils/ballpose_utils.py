@@ -1,15 +1,15 @@
-# utils/ballpose_utils.py
 from __future__ import annotations
 import math
 from typing import Optional, Tuple
+from pose2d_reader import Pose2d
 
 
 def ball_xy_from_camera(
-    camera_pose2d,             # [x, y, heading_deg]  (跟你 Pose2d 一樣格式)
-    yaw_deg: float,            # Photon yaw (deg)
-    distance_m: float,         # 距離 (m)
-    camera_yaw_offset_deg: float,  # 鏡頭相對機器人法線(前方)的偏角，例如左+35 右-35
-    yaw_sign: float = 1.0,     # 若你發現左右顛倒，把這個改成 -1.0
+    camera_pose2d: Pose2d,
+    yaw_deg: float,
+    distance_m: float,
+    camera_yaw_offset_deg: float,
+    yaw_sign: float = 1.0,
 ) -> Optional[Tuple[float, float]]:
     """
     回傳球的場地座標 (x, y)
@@ -19,14 +19,16 @@ def ball_xy_from_camera(
     if distance_m is None:
         return None
 
-    x_cam, y_cam, heading_deg = float(camera_pose2d[0]), float(camera_pose2d[1]), float(camera_pose2d[2])
+    x_cam = float(camera_pose2d.x)
+    y_cam = float(camera_pose2d.y)
+    heading_rad = float(camera_pose2d.heading_rad)
 
-    # 依你的規則： (鏡頭距法線35度 - yawangle)
+    # 鏡頭座標系下的角度（先用度數算，再轉成弧度）
     bearing_robot_deg = camera_yaw_offset_deg - yaw_sign * float(yaw_deg)
+    bearing_robot_rad = math.radians(bearing_robot_deg)
 
-    # 加上機器人heading -> 場地座標角度
-    bearing_field_deg = heading_deg + bearing_robot_deg
-    theta = math.radians(bearing_field_deg)
+    # 場地座標角度 = 相機朝向(rad) + 相對角(rad)
+    theta = heading_rad + bearing_robot_rad
 
     x_ball = x_cam + distance_m * math.cos(theta)
     y_ball = y_cam + distance_m * math.sin(theta)

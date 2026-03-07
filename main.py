@@ -33,10 +33,13 @@ def process_one_camera(cam_name: str, pv: PhotonMultiCamClient, robot_pose2d):
 
     if cam_name == "Camera1":
         camera_horizontal_m = CAMERA1_HORIZONTAL_M
+        camera_yaw_offset_deg = CAMERA1_YAW_OFFSET_DEG
     elif cam_name == "Camera2":
         camera_horizontal_m = CAMERA2_HORIZONTAL_M
+        camera_yaw_offset_deg = CAMERA2_YAW_OFFSET_DEG
     else:
-        camera_horizontal_m = 0.0 
+        camera_horizontal_m = 0.0
+        camera_yaw_offset_deg = 0.0
 
     camera_pose2d = None
     if robot_pose2d is not None:
@@ -57,26 +60,32 @@ def process_one_camera(cam_name: str, pv: PhotonMultiCamClient, robot_pose2d):
         target_height_m=TARGET_HEIGHT_M,
     )
 
-    ball_xy = None
-    if camera_pose2d is not None and dist is not None:
-        ball_xy = ball_xy_from_camera(
-            camera_pose2d=camera_pose2d,
-            yaw_deg=yaw,
-            distance_m=dist,
-            camera_yaw_offset_deg=camera_yaw_offset_deg,
-            yaw_sign=YAW_SIGN,
-        )    
-
     results = []
     n = min(len(yaw_list), len(pitch_list), len(area_list), len(dist_list))
+
     for target_number in range(n):
+        yaw = yaw_list[target_number]
+        pitch = pitch_list[target_number]
+        area = area_list[target_number]
+        dist = dist_list[target_number]
+
+        ball_xy = None
+        if camera_pose2d is not None and dist is not None and yaw is not None:
+            ball_xy = ball_xy_from_camera(
+                camera_pose2d=camera_pose2d,
+                yaw_deg=yaw,
+                distance_m=dist,
+                camera_yaw_offset_deg=camera_yaw_offset_deg,
+                yaw_sign=YAW_SIGN,
+            )
+
         results.append({
             "target_number": target_number,
-            "yaw": yaw_list[target_number],
-            "pitch": pitch_list[target_number],
-            "area": area_list[target_number],
-            "distance": dist_list[target_number],
-            "ball_xy": ball_xy,  # (x,y) or None
+            "yaw": yaw,
+            "pitch": pitch,
+            "area": area,
+            "distance": dist,
+            "ball_xy": ball_xy,
         })
 
     return camera_pose2d, results
