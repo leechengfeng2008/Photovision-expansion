@@ -45,7 +45,7 @@ class PhotonMultiCamClient:
         self.poll_dt = poll_dt
         self.sort_targets_by_area_desc = sort_targets_by_area_desc
 
-        self._inst = ntcore.NetworkTableInstance.getDefault()
+        self._inst = ntcore.NetworkTableInstance.create()
         self._subs: Dict[str, Any] = {}
         self._states: Dict[str, CameraState] = {c: CameraState() for c in cameras}
         self._locks: Dict[str, threading.Lock] = {c: threading.Lock() for c in cameras}

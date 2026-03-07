@@ -285,7 +285,6 @@ def main():
         print("all_center_xys =", all_center_xys)
 
         print("\n=== PILE SCORES ===")
-        print("PILE_BALL_PRIORITY_0_TO_10 =", PILE_BALL_PRIORITY_0_TO_10)
 
         for s in pile_score_infos:
             print(
