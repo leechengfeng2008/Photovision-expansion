@@ -13,7 +13,7 @@ from utils.ballpile_onlycenter_utils import plan_ballpile_centers
 from utils.pile_selector_utils import build_candidates, select_best_pile
 
 
-NT_SERVER = "10.25.6.2"
+NT_SERVER = "10.69.68.2"
 CAMERAS = ["Camera1", "Camera2"]
 POSE2D_KEY = "Pose2d"
 HEADING_UNITS = "deg"
