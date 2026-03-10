@@ -41,10 +41,17 @@ PILE_BALL_PRIORITY_0_TO_10 = 5.0   # 0=完全偏最近, 10=完全偏球多
 DEDUPE_MAX_ANGLE_DEG = 55.0
 
 # ── Version B Density Clustering ─────────────────────────────────────────────
-# density_radius_m:      計算局部密度時，球的鄰近計數半徑
-# density_spread_limit_m: 高密度點群最大允許分散距離，超過則退化為最密單點
-PILE_DENSITY_RADIUS_M      = 0.20
+# PILE_CENTER_MODE:
+#   "density_vb" → Version B 密度中心 + 保險 + grid 加速（正式模式）
+#   "centroid"   → 直接平均，行為與最初版本完全一致（一行回滾）
+PILE_CENTER_MODE = "density_vb"
+
+# density_radius_m:       計算局部密度時，球的鄰近計數半徑
+#                         建議與 cluster_link_m 相同（0.30），確保稀疏排列的球也能計到鄰居
+# density_spread_limit_m: 高密度點群最大允許分散距離，超過則觸發保險回退
+PILE_DENSITY_RADIUS_M       = 0.30
 PILE_DENSITY_SPREAD_LIMIT_M = 0.30
+
 BEST_POSE2D_TABLE = "SmartDashboard"
 BEST_POSE2D_KEY = "BestPilePose2d"
 
@@ -266,6 +273,7 @@ def main():
         pile_count, pile_plans, all_center_xys = plan_ballpile_centers(
             ball_xys=unique_ball_xys,
             cluster_link_m=0.30,
+            center_mode=PILE_CENTER_MODE,
             density_radius_m=PILE_DENSITY_RADIUS_M,
             density_spread_limit_m=PILE_DENSITY_SPREAD_LIMIT_M,
         )
@@ -295,12 +303,21 @@ def main():
 
         print("\n=== BALL PILES ===")
         print("pile_count =", pile_count)
+        print("center_mode =", PILE_CENTER_MODE)
 
         for p in pile_plans:
+            fb_str = ""
+            if p.center_mode == "density_vb":
+                fb_str = (
+                    f"  peak_neighbors={p.densest_neighbor_count}"
+                    f"  peak_pts={p.density_peak_count}"
+                    f"  insurance={'YES ⚠' if p.used_insurance_fallback else 'no'}"
+                )
             print(
                 f"pile {p.pile_id}: "
                 f"center={p.center_xy}, "
                 f"count={p.count}"
+                f"{fb_str}"
             )
 
         print("all_center_xys =", all_center_xys)
