@@ -29,6 +29,61 @@ def _centroid(points: Sequence[Point2]) -> Point2:
     )
 
 
+def _density_center(
+    pile_points: Sequence[Point2],
+    density_radius_m: float = 0.20,
+    spread_limit_m: float = 0.30,
+) -> Point2:
+    """
+    Version B: Fixed-Radius Density Clustering center.
+
+    Algorithm
+    ---------
+    1. For every ball in the pile, count how many neighbours lie within
+       ``density_radius_m`` (its local density).
+    2. Collect all balls that share the maximum density count.
+    3. Safeguard: if those high-density balls are themselves too spread
+       apart (max pairwise distance > spread_limit_m), fall back to the
+       single ball with the highest density (tie broken by first index).
+    4. Return the centroid of the surviving high-density ball(s).
+
+    This avoids being misled by sparse bridging balls at the edge of
+    the cluster while still being computationally lightweight.
+    """
+    n = len(pile_points)
+    if n == 1:
+        return pile_points[0]
+
+    # Step 1 - local density per ball
+    density: List[int] = []
+    for i, p in enumerate(pile_points):
+        count = sum(
+            1
+            for j, q in enumerate(pile_points)
+            if i != j and _dist(p, q) <= density_radius_m
+        )
+        density.append(count)
+
+    max_density = max(density)
+    high_density_pts: List[Point2] = [
+        p for p, d in zip(pile_points, density) if d == max_density
+    ]
+
+    # Step 2 - safeguard: check spread among high-density balls
+    if len(high_density_pts) > 1:
+        max_spread = max(
+            _dist(high_density_pts[a], high_density_pts[b])
+            for a in range(len(high_density_pts))
+            for b in range(a + 1, len(high_density_pts))
+        )
+        if max_spread > spread_limit_m:
+            # Fall back to the single densest ball (first occurrence)
+            best_idx = density.index(max_density)
+            return pile_points[best_idx]
+
+    return _centroid(high_density_pts)
+
+
 def _to_points(points: Iterable[Optional[Point2]]) -> List[Point2]:
     out: List[Point2] = []
     for p in points:
@@ -83,12 +138,17 @@ def cluster_ball_piles(
 def plan_ballpile_centers(
     ball_xys: Iterable[Optional[Point2]],
     cluster_link_m: float = 0.30,
+    density_radius_m: float = 0.20,
+    density_spread_limit_m: float = 0.30,
 ) -> Tuple[int, List[PileCenterInfo], List[Point2]]:
     """
     Pipeline:
     1. 清理輸入球座標，轉成 Point2 list
-    2. 用 cluster_link_m 分堆
-    3. 計算每一堆中心
+    2. 用 cluster_link_m 分堆（Version A single-linkage）
+    3. 用 Version B Fixed-Radius Density Clustering 計算每一堆中心
+       - density_radius_m:      鄰近計數半徑（預設 20 cm）
+       - density_spread_limit_m: 高密度點群的最大允許分散距離，
+                                 超過此值時退化為最密單點（預設 30 cm）
     4. 輸出：
        - pile_count: 有幾堆球
        - plans: 每一堆的完整資訊
@@ -104,7 +164,11 @@ def plan_ballpile_centers(
     all_center_xys: List[Point2] = []
 
     for pile_id, pile_points in enumerate(piles):
-        center_xy = _centroid(pile_points)
+        center_xy = _density_center(
+            pile_points,
+            density_radius_m=density_radius_m,
+            spread_limit_m=density_spread_limit_m,
+        )
         all_center_xys.append(center_xy)
 
         plans.append(

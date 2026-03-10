@@ -8,7 +8,7 @@ from utils.distance_utils import distance_calculate
 from utils.pose_utils import cameraPose2d_calculate
 from pose2d_reader import Pose2dReader
 from utils.ballpose_utils import ball_xy_from_camera
-from utils.ball_dedupe_utils import dedupe_two_cameras
+from utils.ball_dedupe_fov_utils import dedupe_two_cameras_fov
 from utils.ballpile_onlycenter_utils import plan_ballpile_centers
 from utils.pile_selector_utils import build_candidates, select_best_pile
 
@@ -34,6 +34,17 @@ CAMERA2_YAW_OFFSET_DEG = -35.0
 YAW_SIGN = 1.0
 
 PILE_BALL_PRIORITY_0_TO_10 = 5.0   # 0=完全偏最近, 10=完全偏球多
+
+# ── Angle-Constrained Deduplication ──────────────────────────────────────────
+# 兩台鏡頭「光軸 ± 此角度」範圍內才允許做配對，超出範圍的配對視為幾何不可能。
+# 設定為實際半視野角或稍大的保守值（55° 對應文件中的 α/β=55° 設計）。
+DEDUPE_MAX_ANGLE_DEG = 55.0
+
+# ── Version B Density Clustering ─────────────────────────────────────────────
+# density_radius_m:      計算局部密度時，球的鄰近計數半徑
+# density_spread_limit_m: 高密度點群最大允許分散距離，超過則退化為最密單點
+PILE_DENSITY_RADIUS_M      = 0.20
+PILE_DENSITY_SPREAD_LIMIT_M = 0.30
 BEST_POSE2D_TABLE = "SmartDashboard"
 BEST_POSE2D_KEY = "BestPilePose2d"
 
@@ -220,15 +231,20 @@ def main():
         cam2_ball_xys = [r["ball_xy"] for r in cam2_results if r["ball_xy"] is not None]
 
         # --------------------------------------------------
-        # 2) 雙鏡頭刪重
-        # same_ball_error_m 單位是公尺
-        # 0.10 = 10 cm 內視為同一顆球
+        # 2) 雙鏡頭刪重（Direct Comparison + Angle-Constrained Comparison）
+        # same_ball_error_m: 同一顆球的場地座標允許誤差（公尺）
+        # DEDUPE_MAX_ANGLE_DEG: 幾何可見性半視野角約束
         # --------------------------------------------------
-        dedupe_result = dedupe_two_cameras(
+        dedupe_result = dedupe_two_cameras_fov(
             cam1_ball_xys=cam1_ball_xys,
             cam2_ball_xys=cam2_ball_xys,
+            camera1_pose2d=camera1_pose2d,
+            camera2_pose2d=camera2_pose2d,
+            camera1_yaw_offset_deg=CAMERA1_YAW_OFFSET_DEG,
+            camera2_yaw_offset_deg=CAMERA2_YAW_OFFSET_DEG,
             same_ball_error_m=0.10,
-            keep="average",   # 可改成 "cam1" 或 "cam2"
+            max_angle_deg=DEDUPE_MAX_ANGLE_DEG,
+            keep="average",
         )
 
         unique_ball_xys = dedupe_result.unique_points
@@ -237,16 +253,21 @@ def main():
         print("cam1_ball_count =", len(cam1_ball_xys))
         print("cam2_ball_count =", len(cam2_ball_xys))
         print("unique_ball_count =", len(unique_ball_xys))
+        print("matched_pairs =", len(dedupe_result.matched_pairs))
+        print("angle_rejected_pairs =", dedupe_result.angle_rejected_count)
         print("unique_ball_xys =", unique_ball_xys)
 
         # --------------------------------------------------
-        # 3) 球堆分堆 / 中心輸出
-        # cluster_link_m 單位是公尺
-        # 0.30 = 30 cm 內視為同一堆可連結
+        # 3) 球堆分堆 / 中心輸出（Version B: Fixed-Radius Density Clustering）
+        # cluster_link_m:          相鄰連結距離（Version A single-linkage）
+        # density_radius_m:        局部密度計數半徑
+        # density_spread_limit_m:  高密度點群最大分散距離保險
         # --------------------------------------------------
         pile_count, pile_plans, all_center_xys = plan_ballpile_centers(
             ball_xys=unique_ball_xys,
             cluster_link_m=0.30,
+            density_radius_m=PILE_DENSITY_RADIUS_M,
+            density_spread_limit_m=PILE_DENSITY_SPREAD_LIMIT_M,
         )
 
         # --------------------------------------------------
