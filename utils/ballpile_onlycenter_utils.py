@@ -113,19 +113,7 @@ def _density_center(
     density_radius_m: float,
     spread_limit_m: float,
 ) -> Tuple[Point2, bool, int, int]:
-    """
-    Version B: Fixed-Radius Density Clustering center（含保險機制）。
-
-    改進點
-    ------
-    1. Grid 加速：用九宮格查詢，平均 O(N) 取代原本 O(N²)。
-    2. density 計數含自身（與 PDF 報告一致，更直觀地反映「此點附近共有幾顆球」）。
-    3. 保險回退改為選「總距最小」點，而非 index 0（更靠近真實密集核心）。
-
-    Returns
-    -------
-    center_xy, used_fallback, max_neighbor_count, peak_count
-    """
+ 
     n = len(pile_points)
     if n == 1:
         return pile_points[0], False, 1, 1

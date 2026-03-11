@@ -1,58 +1,56 @@
 # pose2d_reader.py
 from __future__ import annotations
-import time
 from dataclasses import dataclass
-from typing import Optional, List
-import ntcore
+from typing import Optional
 import math
+import ntcore
+from wpimath.geometry import Pose2d as WpiPose2d
 
 
 @dataclass
 class Pose2d:
     x: float
     y: float
-    heading_rad: float 
+    heading_rad: float
 
 
 class Pose2dReader:
     """
-    from NT4 read a DoubleArray topic which contains [x,y,degree]
+    Read AdvantageKit Pose2d struct topic from NT4.
+    Example topic:
+        /Advantagekit/RealOutputs/RobotState/robotPose
     """
 
     def __init__(
         self,
         server: str,
-        table: str,
-        key: str,
-        heading_units: str = "deg", 
+        topic_path: str,
         client_name: str = "orangepi-pose2d-reader",
     ):
         self.server = server
-        self.table = table
-        self.key = key
-        self.heading_units = heading_units
+        self.topic_path = topic_path
 
         self._inst = ntcore.NetworkTableInstance.create()
         self._inst.startClient4(client_name)
         self._inst.setServer(server)
 
-        t = self._inst.getTable(table)
-        # self._sub = t.getDoubleArrayTopic(key).subscribe([0.0, 0.0, 0.0]) fro no robot test
-        self._sub = t.getDoubleArrayTopic(key).subscribe([])
-
+        self._sub = self._inst.getStructTopic(topic_path, WpiPose2d).subscribe(WpiPose2d())
         self._last_good: Optional[Pose2d] = None
 
     def get_pose2d(self) -> Optional[Pose2d]:
-        arr: List[float] = self._sub.get()
-        if not arr or len(arr) < 3:
+        raw = self._sub.get()
+        if raw is None:
             return self._last_good
 
-        x, y, h = float(arr[0]), float(arr[1]), float(arr[2])
+        try:
+            x = float(raw.x)
+            y = float(raw.y)
+        except Exception:
+            x = float(raw.X())
+            y = float(raw.Y())
 
-        if self.heading_units == "deg":
+        heading_rad = float(raw.rotation().radians())
 
-            h = math.radians(h)
-
-        p = Pose2d(x=x, y=y, heading_rad=h)
+        p = Pose2d(x=x, y=y, heading_rad=heading_rad)
         self._last_good = p
         return p
