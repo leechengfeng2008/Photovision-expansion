@@ -26,11 +26,11 @@ CAMERA_HEIGHT_M  = 0.527
 CAMERA_PITCH_DEG = 21.0
 TARGET_HEIGHT_M  = 0.075
 
-Camera_Vertical_Displacement = 0.641
+Camera_Vertical_Displacement = -0.641
+CAMERA2_HORIZONTAL_M   = +0.246
 
-CAMERA2_HORIZONTAL_M   = -0.246        # 右側，與 Camera1 鏡像
-CAMERA2_YAW_OFFSET_DEG = -30.0         # ⚠ 待校正
-CAMERA2_YAW_SIGN       = -1.0          # ⚠ 待校正（通常與 Camera1 相同，但需實測確認）
+CAMERA2_YAW_OFFSET_DEG = -35.0    
+CAMERA2_YAW_SIGN       = -1.0     
 
 # 距離合法範圍過濾
 DISTANCE_MIN_M = 0.15
